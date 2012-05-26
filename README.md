@@ -12,15 +12,15 @@ Turn a simple Markdown document into an elegant resume.
 
 ## Quickstart
 
-    php ./build/build.php --source sample.md
-    php ./build/build.php --source sample.md --pdf
+    ./bin/build --source sample.md
+    ./bin/build --source sample.md --pdf
 
 ## Options
 
 If you want to edit your markdown resume in your editor while watching it
 update in your browser, run this command:
 
-    watch php ./build/build.php -s sample.md -r
+    watch ./bin/build -s sample.md -r
     
 This makes the build script run periodically, and html document will refresh
 every two seconds. Open the `./ouput/sample.html` file in your browser, and
