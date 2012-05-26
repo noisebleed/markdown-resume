@@ -1,28 +1,32 @@
 #!/usr/bin/env php
 <?php
 
-define('APPLICATION_BASE_PATH', realpath(__DIR__ . '/..'));
+/*
+ * Configuration
+ */
+$rootDir    = realpath(__DIR__.'/..');
+$srcDir     = $rootDir.'/resume';
+$outputDir  = $rootDir.'/output';
+$vendorDir  = $rootDir.'/vendor';
 
-spl_autoload_register(function ($className) {
+/*
+ * Autoloader
+ */
+spl_autoload_register(function ($className) use ($vendorDir) {
     $namespaces = explode('\\', $className);
     if (count($namespaces) > 1) {
-        $classPath
-            = APPLICATION_BASE_PATH
-            . '/vendor/'
-            . implode('/', $namespaces)
-            . '.php';
+        $classPath = $vendorDir.'/'.implode('/', $namespaces).'.php';
         if (file_exists($classPath)) {
             require_once($classPath);
         }
     }
 });
 
-include_once APPLICATION_BASE_PATH . '/vendor/Mustache/Mustache.php';
-include_once APPLICATION_BASE_PATH . '/vendor/smartypants/smartypants.php';
-include_once APPLICATION_BASE_PATH . '/vendor/markdown-extra/markdown.php';
-include_once APPLICATION_BASE_PATH . '/vendor/lessphp/lessc.inc.php';
-include_once APPLICATION_BASE_PATH . '/vendor/simpledom/simple_html_dom.php';
-
+include_once $vendorDir.'/Mustache/Mustache.php';
+include_once $vendorDir.'/smartypants/smartypants.php';
+include_once $vendorDir.'/markdown-extra/markdown.php';
+include_once $vendorDir.'/lessphp/lessc.inc.php';
+include_once $vendorDir.'/simpledom/simple_html_dom.php';
 
 use Assetic\Asset\AssetCollection;
 use Assetic\Asset\FileAsset;
@@ -46,21 +50,24 @@ if (empty($options['s']) && !empty($options['source'])) {
 }
 
 if (!isset($options['s'])) {
-    exit('Please specify a source document  build.php -s resume.pdf');
+    exit('Please specify a source document: build -s resume/my-resume.md'.PHP_EOL);
 }
 
 $basename     = pathinfo($options['s'], PATHINFO_FILENAME);
-$source       = './resume/' . $options['s'];
-$pdf_source   = './output/' . $basename . '-pdf.html';
-$output       = './output/' . $basename . '.html';
-$pdf_output   = './output/' . $basename . '.pdf';
+$source       = $srcDir.'/'.$options['s'];
+$pdf_source   = $outputDir.'/'.$basename.'-pdf.html';
+$output       = $outputDir.'/'.$basename.'.html';
+$pdf_output   = $outputDir.'/'.$basename.'.pdf';
 
+if (!is_dir($outputDir)) {
+    mkdir($outputDir, 0755);
+}
 
 $refresh_dev = isset($options['r']) || isset($options['refresh']);
 
 $css = new AssetCollection(
     array(
-        new GlobAsset(APPLICATION_BASE_PATH . '/assets/css/*.css')
+        new GlobAsset($rootDir.'/assets/css/*.css')
     ),
     array(
         new Filter\LessphpFilter(),
@@ -68,7 +75,7 @@ $css = new AssetCollection(
 );
 $style = $css->dump();
 
-$template = file_get_contents(APPLICATION_BASE_PATH . '/assets/templates/default.html');
+$template = file_get_contents($rootDir.'/assets/templates/default.html');
 $resume   = file_get_contents($source);
 
 $resume = Markdown($resume);
@@ -92,12 +99,8 @@ $rendered = $m->render(
     )
 );
 
-file_put_contents(
-    $output,
-    $rendered
-);
+file_put_contents($output, $rendered);
 echo "Wrote html to $output\n";
-
 
 $pdf_classed = str_replace(
     'body class=""',
@@ -106,22 +109,11 @@ $pdf_classed = str_replace(
 );
 
 if (isset($options['pdf'])) {
-    file_put_contents(
-        $pdf_source,
-        $pdf_classed
-    );
+    file_put_contents($pdf_source, $pdf_classed);
 
-    exec(
-        'wkhtmltopdf '
-        . $pdf_source .' '
-        . $pdf_output
-        . ' && open ' . $pdf_output
-    );
+    $cmd = sprintf('wkhtmltopdf %s %s', $pdf_source, $pdf_output);
+    shell_exec($cmd);
     
     unlink($pdf_source);
-    echo "Wrote pdf to $pdf_output\n";
+    echo "Wrote pdf to $pdf_output".PHP_EOL;
 }
-
-
-
-/* End of file build.php */
